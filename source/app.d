@@ -63,16 +63,8 @@ unittest {
 
 int main(char[][] args) {
     // Associative arrays can not be created at compile-time or statically.
-    string[][][string] units;
-    string[][string] peers;
-
-    // Generate units dict
-    foreach (s; squares)
-        units[s] = unitlist.filter!(u => u.assumeSorted.contains(s)).array;
-
-    // Generate peers dict
-    foreach (s; squares)
-        peers[s] = units[s].join.filter!(x => x != s).unique.array;
+    string[][][string] units = squares.map!(s => tuple(s, unitlist.filter!(u => u.assumeSorted.contains(s)).array)).assocArray;
+    string[][string] peers = squares.map!(s => tuple(s, units[s].join.filter!(x => x != s).unique.array)).assocArray;
 
     version(unittest) {
         assert(units["C2"] == [["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
