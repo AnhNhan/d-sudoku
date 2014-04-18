@@ -52,33 +52,34 @@ auto createUnitlist()
     return product;
 }
 
-enum squares = rows.cross(columns);
-enum unitlist = createUnitlist;
+static squares = rows.cross(columns);
+static unitlist = createUnitlist;
+
+static string[][][string] units;
+static string[][string] peers;
 
 unittest {
     assert(81 == squares.length);
     assert(27 == unitlist.length);
 
+    assert(units["C2"] == [["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
+                           ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"],
+                           ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"]]);
+
+    assert(peers["C2"] == ["A2", "B2", "D2", "E2", "F2", "G2", "H2", "I2",
+                           "C1", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
+                           "A1", "A3", "B1", "B3"]);
+
     writeln("All non-rt tests passed.");
 }
 
+static this()
+{
+    units = squares.map!(s => tuple(s, unitlist.filter!(u => u.assumeSorted.contains(s)).array)).assocArray;
+    peers = squares.map!(s => tuple(s, units[s].join.filter!(x => x != s).unique.array)).assocArray;
+}
+
 int main(char[][] args) {
-    // Associative arrays can not be created at compile-time or statically.
-    string[][][string] units = squares.map!(s => tuple(s, unitlist.filter!(u => u.assumeSorted.contains(s)).array)).assocArray;
-    string[][string] peers = squares.map!(s => tuple(s, units[s].join.filter!(x => x != s).unique.array)).assocArray;
-
-    version(unittest) {
-        assert(units["C2"] == [["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
-                                   ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"],
-                                   ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2", "C3"]]);
-
-        assert(peers["C2"] == ["A2", "B2", "D2", "E2", "F2", "G2", "H2", "I2",
-                                           "C1", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
-                                           "A1", "A3", "B1", "B3"]);
-
-        writeln("All rt tests passed.");
-    }
-
     return 0;
 }
 
