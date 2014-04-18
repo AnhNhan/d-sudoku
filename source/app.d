@@ -1,6 +1,7 @@
 
 import std.algorithm;
 import std.array;
+import std.conv;
 import std.range;
 import std.stdio;
 import std.traits;
@@ -77,7 +78,85 @@ int main(char[][] args) {
 
         writeln("All rt tests passed.");
     }
+
     return 0;
+}
+
+/**
+ * Sudoku-related helper functions.
+ */
+
+/// Convert grid to a dict of possible values, {square: digits}, or
+/// return False if a contradiction is detected.
+auto parse_grid(string grid)
+{
+    auto values = squares.map!(s => tuple(s, digits)).assocArray;
+    foreach (s, d; grid.grid_values)
+    {
+        if (digits.contains(d))
+        {
+            values[s] = [cast(char) d];
+        }
+    }
+
+    return values;
+}
+
+/// Convert grid into a dict of {square: char} with '0' or '.' for empties.
+auto grid_values(string grid)
+{
+    auto chars = grid
+        .filter!(c => digits.contains(c) || "0.".contains(c))
+        .map!(c => c == '.' ? '0' : c) // Normalize . and 0 to 0
+        .array
+    ;
+    assert(81 == chars.length, to!string(chars.length));
+    return squares.zip(chars).assocArray;
+}
+
+unittest {
+    auto grid1 = "4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......";
+    auto grid2 = "
+400000805
+030000000
+000700000
+020000060
+000080400
+000010000
+000603070
+500200000
+104000000";
+    auto grid3 = "
+4 . . |. . . |8 . 5
+. 3 . |. . . |. . .
+. . . |7 . . |. . .
+------+------+------
+. 2 . |. . . |. 6 .
+. . . |. 8 . |4 . .
+. . . |. 1 . |. . .
+------+------+------
+. . . |6 . 3 |. 7 .
+5 . . |2 . . |. . .
+1 . 4 |. . . |. . .
+";
+
+    auto grid1_vals = grid1.grid_values;
+    auto grid2_vals = grid2.grid_values;
+    auto grid3_vals = grid3.grid_values;
+
+    assert(grid1_vals == grid2_vals);
+    assert(grid2_vals == grid3_vals);
+    assert(grid3_vals == grid1_vals);
+
+    auto grid1_parsed = grid1.parse_grid;
+    auto grid2_parsed = grid2.parse_grid;
+    auto grid3_parsed = grid3.parse_grid;
+
+    assert(grid1_parsed == grid2_parsed);
+    assert(grid2_parsed == grid3_parsed);
+    assert(grid3_parsed == grid1_parsed);
+
+    writeln("All grid-parsing functions passed.");
 }
 
 /**
@@ -99,4 +178,9 @@ string[] unique(R)(R input)
         result ~= str;
     }
     return result;
+}
+
+bool contains(C)(string haystack, C needle)
+{
+    return haystack.countUntil(needle) != -1;
 }
