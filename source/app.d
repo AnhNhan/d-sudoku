@@ -4,6 +4,7 @@ import std.array;
 import std.conv;
 import std.range;
 import std.stdio;
+import std.string;
 import std.traits;
 import std.typecons;
 
@@ -92,13 +93,10 @@ int main(char[][] args) {
 auto parse_grid(string grid)
 {
     auto values = squares.map!(s => tuple(s, digits)).assocArray;
+
     foreach (s, d; grid.grid_values)
-    {
-        if (digits.contains(d))
-        {
-            values[s] = [cast(char) d];
-        }
-    }
+        if (digits.contains(d) && !values.assign(s, cast(char) d))
+            throw new Exception("Contradiction!");
 
     return values;
 }
@@ -158,6 +156,85 @@ unittest {
     assert(grid3_parsed == grid1_parsed);
 
     writeln("All grid-parsing functions passed.");
+}
+
+/// Eliminate all the other values (except d) from values[s] and propagate.
+/// Return values, except return False if a contradiction is detected.
+bool assign(ref string[string] values, string s, char d)
+{
+    auto other_values = values[s].replace([d], "");
+    return all!"a"(other_values.map!(d2 => values.eliminate(s, cast(char) d2)));
+}
+
+/// Eliminate d from values[s]; propagate when values or places <= 2.
+/// Return values, except return False if a contradiction is detected.
+bool eliminate(ref string[string] values, string s, char d)
+{
+    if (!values[s].contains(d))
+        return true;
+
+    values[s] = values[s].replace([d], "");
+
+    // (1) If a square s is reduced to one value d2, then eliminate d2 from the
+    // peers
+    if (values[s].length == 0)
+        return false; // Contradiction: removed last value
+    else if (values[s].length == 1)
+    {
+        auto d2 = values[s][0]; // [0] so we get the char
+        if (!all!"a"(peers[s].map!(s2 => values.eliminate(s2, cast(char) d2))))
+            return false;
+    }
+
+    // (2) If a unit u is reduced to only one place for a value d, then put it
+    // there.
+    foreach (u; units[s])
+    {
+        auto dplaces = u.filter!(_s => values[_s].contains(d)).array;
+        if (dplaces.length == 0)
+            return false; // Contradiction: no place for this value
+        else if (dplaces.length == 1)
+        {
+            // d can only be in one place in unit; assign it there
+            if (!values.assign(dplaces[0], cast(char) d))
+                return false;
+        }
+    }
+
+    return true;
+}
+
+/// Render these values as a 2D grid into a string.
+string render(string[string] values)
+{
+    auto width = 1 + squares.map!(s => values[s].length).reduce!max;
+    auto line = "-".repeat(width * 3).array.join.repeat(3).array.join("+");
+
+    auto appender = appender!string;
+
+    foreach (char r; rows)
+    {
+        appender.put(
+            columns.map!(c => values[[r, cast(char) c]].center(width) ~ ("36".contains(c) ? "|" : ""))
+                .join
+                ~ "\n"
+        );
+        if ("CF".contains(r))
+            appender.put(line ~ "\n");
+    }
+    return appender.data;
+}
+
+unittest {
+    auto grid1 = "003020600900305001001806400008102900700000008006708200002609500800203009005010300";
+
+    // Note: This test already solves its first sudoku. This is because of all
+    //       the processing all the processing already happening while parsing.
+
+    // One line, because trailing whitespace :/
+    auto grid1_rendered = "4 8 3 |9 2 1 |6 5 7 \n9 6 7 |3 4 5 |8 2 1 \n2 5 1 |8 7 6 |4 9 3 \n------+------+------\n5 4 8 |1 3 2 |9 7 6 \n7 2 9 |5 6 4 |1 3 8 \n1 3 6 |7 9 8 |2 4 5 \n------+------+------\n3 7 2 |6 8 9 |5 1 4 \n8 1 4 |2 5 3 |7 6 9 \n6 9 5 |4 1 7 |3 8 2 \n";
+
+    assert(grid1_rendered == grid1.parse_grid.render);
 }
 
 /**
