@@ -62,13 +62,8 @@ unittest {
 }
 
 int main(char[][] args) {
-    auto createUnits()
-    {
-        string[][][string] product;
-        return product;
-    }
-
-    string[][][string] units = createUnits;
+    // Associative arrays can not be created at compile-time or statically.
+    string[][][string] units;
     string[][string] peers;
 
     // Generate units dict
@@ -77,7 +72,7 @@ int main(char[][] args) {
 
     // Generate peers dict
     foreach (s; squares)
-        auto p = units[s].join.filter!(x => x != s).uniq.array;
+        peers[s] = units[s].join.filter!(x => x != s).unique.array;
 
     version(unittest) {
         assert(units["C2"] == [["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
@@ -88,8 +83,28 @@ int main(char[][] args) {
                                            "C1", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
                                            "A1", "A3", "B1", "B3"]);
 
-
         writeln("All rt tests passed.");
     }
     return 0;
+}
+
+/**
+ * Simple helper functions.
+ */
+
+/// Eager unique set that does *not* require the input to be sorted.
+string[] unique(R)(R input)
+    if (isInputRange!R && !isInfinite!R && is(ElementType!R == string))
+{
+    bool[string] uniq;
+    string[] result;
+    foreach (str; input)
+    {
+        if (str in uniq)
+            continue;
+
+        uniq[str] = true;
+        result ~= str;
+    }
+    return result;
 }
