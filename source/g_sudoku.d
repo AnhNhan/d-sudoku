@@ -36,6 +36,7 @@ auto cross(A, B)(A a, B b)
 }
 
 template SudokuSolver(size_t size)
+    if (size == 9 || size == 16 || size == 25)
 {
     private string generate_range(A, B)(A start, B end)
     {
@@ -47,12 +48,16 @@ template SudokuSolver(size_t size)
 
     enum digits = generate_range('1', '1' - 1 + size);
     enum rows   = generate_range('A', 'A' - 1 + size);
-    enum cols = digits;
+    static if (size < 10)
+        enum cols = digits;
+    else // Use lower case letters instead of numbers when we run out of digits
+        enum cols = generate_range('a', 'a' - 1 + size);
 
     static squares = rows.cross(cols);
     static unitlist = [
         cols.map!(c => rows.cross(c)).array,
         rows.map!(r => r.cross(cols)).array,
+        // TODO: Make this more generic, this currently is hard-coded for size 9
         ["123", "456", "789"]
             .map!(
                 cs =>
@@ -93,7 +98,7 @@ template SudokuSolver(size_t size)
             .map!(c => c == '.' ? '0' : c) // Normalize . and 0 to 0
             .array
         ;
-        assert(81 == chars.length, to!string(chars.length));
+        assert(size ^^ 2 == chars.length, to!string(chars.length));
         return squares.zip(chars).assocArray;
     }
 
@@ -146,6 +151,7 @@ template SudokuSolver(size_t size)
     /// Render these values as a 2D grid into a string.
     string render(Grid values)
     {
+        // TODO: Generice this function for other grid sizes
         auto width = 1 + squares.map!(s => values[s].length).reduce!max;
         auto line = "-".repeat(width * 3).array.join.repeat(3).array.join("+");
 
@@ -166,11 +172,17 @@ template SudokuSolver(size_t size)
 }
 
 unittest {
+    static assert( __traits(compiles, SudokuSolver!9.digits ));
+    static assert( __traits(compiles, SudokuSolver!16.digits));
+    static assert( __traits(compiles, SudokuSolver!25.digits));
+
+    static assert(!__traits(compiles, SudokuSolver!10.digits));
+
     alias SudokuSolver!9 Solver;
     assert(Solver.digits == "123456789", Solver.digits);
-    assert(Solver.rows   == "ABCDEFGHI", Solver.rows);
+    assert(Solver.rows   == "ABCDEFGHI", Solver.rows  );
 
-    assert(81 == Solver.squares.length);
+    assert(81 == Solver.squares.length );
     assert(27 == Solver.unitlist.length);
 
     assert(Solver.units["C2"] == [["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
